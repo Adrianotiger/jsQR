@@ -343,7 +343,8 @@ function scan(matrix) {
                 data: decoded.text,
                 chunks: decoded.chunks,
                 version: decoded.version,
-                info: decoded.formatInfo,                
+                info: decoded.formatInfo,      
+                matrix: extracted.matrix,          
                 location: {
                     topRightCorner: extracted.mappingFunction(location_1.dimension, 0),
                     topLeftCorner: extracted.mappingFunction(0, 0),

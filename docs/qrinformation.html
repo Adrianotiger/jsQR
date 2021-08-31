@@ -58,6 +58,7 @@
   <p>Pure JavaScript QR code decoding library.</p>
   <div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
   <canvas id="canvas" hidden></canvas>
+  <canvas id="qrgenerator" hidden></canvas>
   <div id="output" hidden>
     <div id="outputMessage">No QR code detected.</div>
     <div hidden><b>Data:</b> <i id="outputData"></i>
@@ -86,6 +87,14 @@
     var outputTEncoding = document.getElementById("table3");
     var outputTMask = document.getElementById("table4");
     var outputTLength = document.getElementById("table5");
+    var qrGenerator = document.getElementById("qrgenerator");
+    var videoId = null;
+    
+    qrGenerator.addEventListener("click", ()=>{
+      qrGenerator.hidden = true;
+      video.play();
+      videoId = requestAnimationFrame(tick);
+    });
 
     function drawLine(begin, end, color) {
       canvas.beginPath();
@@ -101,7 +110,7 @@
       video.srcObject = stream;
       video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
       video.play();
-      requestAnimationFrame(tick);
+      videoId = requestAnimationFrame(tick);
     });
 
     function tick() {
@@ -130,23 +139,29 @@
           outputTLength.innerText = code.binaryData.length;                                       
           console.log(code);
           video.pause();
-          setTimeout(()=>{video.play();}, 1000);
+          video.currentTime = 0;
+          cancelAnimationFrame(videoId);
+          setTimeout(()=>{
+            generateQR(code.matrix);
+          }, 10);
+          return;
+          //setTimeout(()=>{video.play();}, 1000);
         } else {
           //outputMessage.hidden = false;
           //outputData.parentElement.hidden = true;
         }
       }
-      requestAnimationFrame(tick);
+      videoId = requestAnimationFrame(tick);
     }
     
     function setVersion(ver)
     {
       var d = document.createElement("div");
-      for(var j=1;j<40;j++)
+      for(var j=1;j<=40;j++)
       {
         var i = document.createElement("i");
         i.appendChild(document.createTextNode(" " + j + (j<39?". ":" ")));
-        setHighlight(i, j === parseInt(ver));
+        setHighlight(i, j === parseInt(ver), '#bff');
         d.appendChild(i);
       }
       return d;      
@@ -163,7 +178,7 @@
       {
         var i = document.createElement("i");
         i.appendChild(document.createTextNode((j>0?"- ":" ") + errors[j] + " "));
-        setHighlight(i, j === parseInt(err));
+        setHighlight(i, j === parseInt(err), '#fbf');
         d.appendChild(i);
       }
       return d;      
@@ -181,14 +196,57 @@
       {
         var i = document.createElement("i");
         i.appendChild(document.createTextNode((j>0?"- ":" ") + encodings[j] + " "));
-        setHighlight(i, encodings[j].toLowerCase().indexOf(enc.toLowerCase()) >=0);
+        setHighlight(i, encodings[j].toLowerCase().indexOf(enc.toLowerCase()) === 0, '#bfb');
         d.appendChild(i);
       }
       return d;      
     }
-    function setHighlight(i, hl)
+    function setHighlight(i, hl, col)
     {
-      i.setAttribute("style", hl ? "font-weight:bold;background-color:#bff;" : "opacity:0.8;");
+      i.setAttribute("style", hl ? "font-weight:bold;background-color:" + col + ";" : "opacity:0.8;");
+    }
+    function generateQR(matrix)
+    {
+      qrGenerator.hidden = false;
+      canvasElement.hidden = true;
+      
+      qrGenerator.height = qrGenerator.width;
+      var size = parseInt(qrGenerator.width);
+      var pxSize = parseInt(size / matrix.width); 
+       
+      var ctx = qrGenerator.getContext("2d");
+      ctx.clearRect(0,0,size,size);
+      ctx.beginPath();
+      for(var y=0;y<matrix.height;y++)
+      {
+        for(var x=0;x<matrix.width;x++)
+        {
+          if(matrix.data[y*matrix.height + x] == 1)
+            ctx.fillRect(x * pxSize, y * pxSize, pxSize, pxSize);                  
+        }
+      }
+      ctx.stroke();
+      
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = 'rgb(255, 255, 0)';
+      
+      ctx.beginPath();
+      ctx.fillRect(0, 0, pxSize*7, pxSize*7);
+      ctx.fillRect(pxSize*matrix.width-pxSize*7, 0, pxSize*7, pxSize*7);
+      ctx.fillRect(0, pxSize*matrix.height-pxSize*7, pxSize*7, pxSize*7); 
+      ctx.fillRect(pxSize*matrix.width-pxSize*7 - pxSize*2, pxSize*matrix.height-pxSize*7 - pxSize*2, pxSize*5, pxSize*5); // alignment
+      ctx.fillRect(pxSize*6, pxSize*8, pxSize*1, pxSize*matrix.height - pxSize*16); // timer vertical
+      ctx.fillRect(pxSize*8, pxSize*6, pxSize*matrix.width - pxSize*16, pxSize*1); // timer horizontal   
+      
+      ctx.fillStyle = 'rgb(0, 255, 255)';
+      ctx.fillRect(0, pxSize*matrix.height-pxSize*11, pxSize*6, pxSize*3); // version
+      ctx.fillRect(pxSize*matrix.width-pxSize*11, 0, pxSize*3, pxSize*6); // version   
+      
+      ctx.fillStyle = 'rgb(120, 255, 120)';
+      ctx.fillRect(pxSize*matrix.width-pxSize*2, pxSize*matrix.height-pxSize*2, pxSize*2, pxSize*2); // encoding
+      
+      ctx.stroke();
+      
     }
   </script>
 </body>
