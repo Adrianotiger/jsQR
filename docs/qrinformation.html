@@ -1,7 +1,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>jsQR Demo</title>
+  <title>jsQR Demo - QR Information</title>
   <script src="./jsQR.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Ropa+Sans" rel="stylesheet">
   <style>
@@ -53,16 +53,26 @@
   </style>
 </head>
 <body>
-  <h1>jsQR Demo</h1>
+  <h1>jsQR Demo - QR Information</h1>
   <a id="githubLink" href="https://github.com/cozmo/jsQR">View documentation on Github</a>
   <p>Pure JavaScript QR code decoding library.</p>
   <div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
   <canvas id="canvas" hidden></canvas>
   <div id="output" hidden>
     <div id="outputMessage">No QR code detected.</div>
-    <div hidden><b>Data:</b> <span id="outputData"></span></div>
+    <div hidden><b>Data:</b> <i id="outputData"></i>
+      <table border='2'>
+        <tbody>
+          <tr><th>Property</th><th>Value</th></tr>
+          <tr><td>Version</td><td id='table1'></td></tr>
+          <tr><td>Error Correction</td><td id='table2'></td></tr>
+          <tr><td>Encoding</td><td id='table3'></td></tr>
+          <tr><td>Data Mask</td><td id='table4'></td></tr>
+          <tr><td>Length</td><td id='table5'></td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  <br><a href='qrinformation.html'>Get extended QR code information (Error Correction Code, Length, Encoding, Mask, Version)</a>
   <script>
     var video = document.createElement("video");
     var canvasElement = document.getElementById("canvas");
@@ -71,6 +81,11 @@
     var outputContainer = document.getElementById("output");
     var outputMessage = document.getElementById("outputMessage");
     var outputData = document.getElementById("outputData");
+    var outputTVersion = document.getElementById("table1");
+    var outputTError = document.getElementById("table2");
+    var outputTEncoding = document.getElementById("table3");
+    var outputTMask = document.getElementById("table4");
+    var outputTLength = document.getElementById("table5");
 
     function drawLine(begin, end, color) {
       canvas.beginPath();
@@ -103,20 +118,77 @@
         var code = jsQR(imageData.data, imageData.width, imageData.height, {
           inversionAttempts: "dontInvert",
         });
-        if (code) {
-          drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
-          drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
-          drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
-          drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");
+        if (code && code.chunks && code.chunks.length > 0) {
           outputMessage.hidden = true;
           outputData.parentElement.hidden = false;
           outputData.innerText = code.data;
+          const chunk = code.chunks[0];
+          outputTVersion.innerHTML = setVersion(code.version).innerHTML;
+          outputTError.innerHTML = setECC(code.info.errorCorrectionLevel).innerHTML;
+          outputTMask.innerText = code.info.dataMask;
+          outputTEncoding.innerHTML = setEnc(chunk.type).innerHTML; 
+          outputTLength.innerText = code.binaryData.length;                                       
+          console.log(code);
+          video.pause();
+          setTimeout(()=>{video.play();}, 1000);
         } else {
-          outputMessage.hidden = false;
-          outputData.parentElement.hidden = true;
+          //outputMessage.hidden = false;
+          //outputData.parentElement.hidden = true;
         }
       }
       requestAnimationFrame(tick);
+    }
+    
+    function setVersion(ver)
+    {
+      var d = document.createElement("div");
+      for(var j=1;j<40;j++)
+      {
+        var i = document.createElement("i");
+        i.appendChild(document.createTextNode(" " + j + (j<39?". ":" ")));
+        setHighlight(i, j === parseInt(ver));
+        d.appendChild(i);
+      }
+      return d;      
+    }
+    function setECC(err)
+    {
+      const errors = [
+            "[L]ow (7%)", 
+            "[M]edium (15%)", 
+            "[Q]uartile (25%)", 
+            "[H]igh (30%)"];
+      var d = document.createElement("div");
+      for(var j=0;j<4;j++)
+      {
+        var i = document.createElement("i");
+        i.appendChild(document.createTextNode((j>0?"- ":" ") + errors[j] + " "));
+        setHighlight(i, j === parseInt(err));
+        d.appendChild(i);
+      }
+      return d;      
+    }
+    function setEnc(enc)
+    {
+      const encodings = [
+            "Numeric(3.3bits)", 
+            "Alphanumeric(5.5bits)", 
+            "Byte(8bits)", 
+            "Kanji(13bits)",
+            "ECI"];
+      var d = document.createElement("div");
+      for(var j=0;j<5;j++)
+      {
+        var i = document.createElement("i");
+        i.appendChild(document.createTextNode((j>0?"- ":" ") + encodings[j] + " "));
+        setHighlight(i, encodings[j].toLowerCase().indexOf(enc.toLowerCase()) >=0);
+        d.appendChild(i);
+      }
+      return d;      
+    }
+    function setHighlight(i, hl)
+    {
+      i.setAttribute("style", hl ? "font-weight:bold;background-color:#bff;" : "opacity:0.8;");
     }
   </script>
 </body>

@@ -343,6 +343,7 @@ function scan(matrix) {
                 data: decoded.text,
                 chunks: decoded.chunks,
                 version: decoded.version,
+                info: decoded.formatInfo,                
                 location: {
                     topRightCorner: extracted.mappingFunction(location_1.dimension, 0),
                     topLeftCorner: extracted.mappingFunction(0, 0),
@@ -788,7 +789,9 @@ function decodeMatrix(matrix) {
         }
     }
     try {
-        return decodeData_1.decode(resultBytes, version.versionNumber);
+        var ret = decodeData_1.decode(resultBytes, version.versionNumber);
+        ret.formatInfo = formatInfo; 
+        return ret;
     }
     catch (_a) {
         return null;
@@ -957,7 +960,7 @@ function decode(data, version) {
         text: "",
         bytes: [],
         chunks: [],
-        version: version,
+        version: version
     };
     while (stream.available() >= 4) {
         var mode = stream.readBits(4);
